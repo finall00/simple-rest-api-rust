@@ -1,22 +1,28 @@
-# Build stage
-FROM rust:1.69-buster as builder
+FROM rust:1.72 as builder
 
 WORKDIR /app
 
-# accept the build argument
-ARG DATABASE_URL
+COPY Cargo.toml Cargo.lock ./
 
-ENV DATABASE_URL=$DATABASE_URL
+ENV CARGO_HOME=/usr/local/cargo
+
+# Instale dependências e compile o projeto sem interações
+RUN cargo install --locked cargo-chef && \
+    cargo chef prepare && \
+    cargo chef cook --release
+
+RUN cargo fetch
 
 COPY . . 
 
 RUN cargo build --release
 
-# Production stage
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 WORKDIR /usr/local/bin
 
 COPY --from=builder /app/target/release/rust-crud-api .
+
+
 
 CMD ["./rust-crud-api"]
